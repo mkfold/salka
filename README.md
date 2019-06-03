@@ -1,7 +1,7 @@
-# salka
+# salka :mag:
 neural networks for unsupervised anomaly detection in computer networks. written in pytorch.
 
-based on the work of [Tuor et al.](https://arxiv.org/abs/1712.00557), this project sets out to apply more recent approaches to deep language modeling using more recent frameworks.
+based on/inspired by the work of [Tuor et al.](https://arxiv.org/abs/1712.00557) and [safekit](https://github.com/pnnl/safekit), this project sets out to apply more recent approaches to deep language modeling using more recent frameworks.
 
 ## features
 * recurrent neural network language models (uni/bidirectional)
@@ -9,9 +9,26 @@ based on the work of [Tuor et al.](https://arxiv.org/abs/1712.00557), this proje
 * dataset tools:
   * parse and tokenize log files into character-level features on-the-fly
 
+## dependencies
+* python 3.7
+* pytorch
+* numpy
+* click
+* tqdm
+
+if you use pyenv+pipenv, there's a Pipfile to get you started :sparkles:
+
 ## todo
 * analysis tools:
-  * generate scores based on labeled data
+  * evaluate model performance if labels are available
 * dataset tools:
   * support for really large text files
   * support for byte pair encoding, word-level encoding
+
+## references
+* Recurrent language model: 
+  * [Recurrent Neural Network Language Models for Open Vocabulary Event-Level Cyber Anomaly Detection](https://arxiv.org/abs/1712.00557)
+* Transformer language model:
+  * [Improving Language Understanding with Unsupervised Learning](https://openai.com/blog/language-unsupervised/) and accompanying paper, "Improving Language Understanding by Generative Pre-Training"
+  * [Better Language Models and Their Implications](https://openai.com/blog/better-language-models/) and accompanying paper, "Language Models are Unsupervised Multitask Learners"
+* Byte pair encoding: [Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/abs/1508.07909)
