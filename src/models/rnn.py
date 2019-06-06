@@ -24,10 +24,11 @@ class RNNLanguageModel(nn.Module):
 
         self.embedding = nn.Embedding(vocab_size, x_size, padding_idx=0)
 
-        self.layers = nn.ModuleList([cell(x_size, h_size, dropout=dropout,
+        self.layers = nn.ModuleList([cell(x_size, h_size, dropout=0,
                                           bidirectional=bidir, batch_first=True)])
+        self.dropout = nn.Dropout(dropout)
         for i in range(n_layers - 1):
-            self.layers += [cell(h_size, h_size, dropout=dropout,
+            self.layers += [cell(h_size * 2 if bidir else h_size, h_size, dropout=0,
                                  bidirectional=bidir, batch_first=True)]
 
         if tied_weights:
@@ -38,10 +39,10 @@ class RNNLanguageModel(nn.Module):
             self.out = nn.Linear(h_size * 2 if bidir else h_size, vocab_size)
 
         if residual:
-            self.residual = nn.ModuleList([nn.Conv1d(x_size, h_size, 1)])
+            self.residual = nn.ModuleList([nn.Conv1d(x_size, h_size * 2 if bidir else h_size, 1)])
             for i in range(n_layers - 1):
-                self.residual += [nn.Conv1d(h_size, h_size, 1)]
-            self.residual += [nn.Conv1d(h_size, vocab_size, 1)]
+                self.residual += [nn.Conv1d(h_size * 2 if bidir else h_size, h_size * 2 if bidir else h_size, 1)]
+            self.residual += [nn.Conv1d(h_size * 2 if bidir else h_size, vocab_size, 1)]
         else:
             self.residual = None
 
@@ -55,11 +56,12 @@ class RNNLanguageModel(nn.Module):
         for i in range(self.n_layers):
             res = self.residual[i](x.transpose(1, 2)).transpose(1, 2)\
                     if self.residual is not None else 0.
-            x, _ = self.layers[i](x)#, zeros[i])
+            x, _ = self.layers[i](x)
+            x = self.dropout(x)
             x += res
 
-        x = self.out(x) #+ (self.residual[i](x.transpose(1, 2)).transpose(1, 2)) \
-                        #    if self.residual is not None else 0.
+        x = self.out(x) + (self.residual[-1](x.transpose(1, 2)).transpose(1, 2) \
+                if self.residual is not None else 0.) 
 
         return x
 
