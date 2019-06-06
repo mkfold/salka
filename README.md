@@ -1,4 +1,6 @@
-# salka :mag:
+![](https://repository-images.githubusercontent.com/184971303/09029180-87e3-11e9-8633-cfc73a9642d3)
+
+
 neural networks for unsupervised anomaly detection in computer networks. written in pytorch.
 
 based on/inspired by the work of [Tuor et al.](https://arxiv.org/abs/1712.00557) and [safekit](https://github.com/pnnl/safekit), this project sets out to apply more recent approaches to deep language modeling using more recent frameworks.
