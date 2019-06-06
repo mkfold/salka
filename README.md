@@ -1,4 +1,4 @@
-![](https://repository-images.githubusercontent.com/184971303/09029180-87e3-11e9-8633-cfc73a9642d3)
+<img src="https://user-images.githubusercontent.com/15945773/59009279-cb513900-87e1-11e9-8aa1-c190a310dbb9.png" height="72"></img>
 
 
 neural networks for unsupervised anomaly detection in computer networks. written in pytorch.
