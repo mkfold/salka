@@ -69,7 +69,7 @@ class TimeBufferedCSVReader(object):
         return data
 
 class CSVDataset(Dataset):
-    def __init__(self, data, vocab=CHAR_VOCAB, rewrites=None,
+    def __init__(self, data, vocab=CHAR_VOCAB, maxlen=None, rewrites=None,
                  word_sep=None, pre_sep=',', ignore_cols=[0], meta_cols=[0,1],
                  **kwargs):
         super().__init__()
@@ -111,6 +111,7 @@ class CSVDataset(Dataset):
             self.maxlen = max(self.maxlen, line_len)
             self.data += [(line_no, meta, line)]
 
+        if maxlen is not None: self.maxlen = maxlen + 1
         self.length = len(self.data)
 
     def __len__(self):
@@ -118,8 +119,11 @@ class CSVDataset(Dataset):
 
     def __getitem__(self, i):
         seq = self.data[i][2]
-        pad = [self.pad_idx] * (self.maxlen - len(seq))
-        seq_tensor = torch.tensor(seq + pad, dtype=torch.long)
+        if len(seq) < self.maxlen:
+            seq += [self.pad_idx] * (self.maxlen - len(seq))
+        elif len(seq) > self.maxlen:
+            seq = seq[:self.maxlen]
+        seq_tensor = torch.tensor(seq, dtype=torch.long)
         seq_len = torch.tensor(len(seq), dtype=torch.long)
 
         return self.data[i][0], self.data[i][1], seq_tensor, seq_len

@@ -11,7 +11,7 @@ from utils.config import load_config
 from data.loader import CSVDataset, TimeBufferedCSVReader
 from models.rnn import RNNLanguageModel
 
-_OPTS = {'adam' : optim.Adam, 'sgd' : optim.SGD}
+_OPTS = {'adam' : optim.Adam, 'sgd' : optim.SGD, 'rms' : optim.RMSprop}
 
 # TODO: add evaluation fcn to group
 @click.group()
@@ -32,15 +32,16 @@ def cli():
 @click.option('--optimizer', type=str, default='adam') # TODO: choice type
 @click.option('--lr', type=float, default=0.01)
 @click.option('--mb', type=int, default=256)
-@click.option('--num_epochs', type=int, default=100)
 @click.option('--cpu', is_flag=True)
 def train(data_file, config, layers, hidden_dim, dropout, rnn_cell, embedding_dim,
-          tied_weights, bidir, residual, optimizer, lr, mb, num_epochs, cpu):
+          tied_weights, bidir, residual, optimizer, lr, mb, cpu):
     config = load_config(config)
     window_batches = TimeBufferedCSVReader(data_file, **config['reader'])
 
     device = torch.device('cuda' if torch.cuda.is_available() and not cpu else 'cpu')
-    model = RNNLanguageModel(embedding_dim, 255, hidden_dim, layers, rnn_cell,
+    vocab_size = config['dataset']['vocab_size']
+
+    model = RNNLanguageModel(embedding_dim, vocab_size, hidden_dim, layers, rnn_cell,
                              dropout=dropout, residual=residual, bidir=bidir,
                              tied_weights=tied_weights).to(device)
 
@@ -100,8 +101,8 @@ def train(data_file, config, layers, hidden_dim, dropout, rnn_cell, embedding_di
             loss = criterion(preds.transpose(1, 2), y)
             loss = loss.sum(dim=1) / y_mask.sum(dim=1).squeeze()
 
-            for line, user, score in zip(line_nums, meta, loss):
-                scores.write(f'{line},{user},{score}\n')
+            for line_no, line_meta, line_score in zip(line_nums, meta, loss):
+                scores.write(f'{line_no},{line_meta},{line_score}\n')
 
             loss = loss.mean()
 
