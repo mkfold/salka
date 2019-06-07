@@ -26,6 +26,9 @@ if you use pyenv+pipenv, there's a Pipfile to get you started :sparkles:
 ## todo
 * analysis tools:
   * evaluate model performance if labels are available
+  * ranking/statistics of network and client scores
+* support for streaming inputs
+* support for conditioning input on categorical features and metadata
 
 ## references
 * Recurrent language model: 
