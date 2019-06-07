@@ -6,6 +6,7 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import click
+from bpe import Encoder
 
 from utils.config import load_config
 from data.loader import CSVDataset, TimeBufferedCSVReader
@@ -36,18 +37,28 @@ def cli():
 def train(data_file, config, blocks, attn_dim, num_heads, nn_dim, dropout, tied_weights,
           optimizer, lr, mb, scale_residuals, block_norm, cpu):
     config = load_config(config)
+
+    context_size = config['dataset']['maxlen']
+
+    if 'vocab' in config['dataset']:
+        vocab = Encoder.load(config['dataset']['vocab'])
+        config['dataset']['vocab'] = vocab
+        vocab_size = config['dataset']['vocab'].vocab_size
+        pad_idx = vocab.word_vocab[vocab.PAD]
+    else:
+        vocab_size = 255
+        pad_idx = 0
+
     window_batches = TimeBufferedCSVReader(data_file, **config['reader'])
 
     device = torch.device('cuda' if torch.cuda.is_available() and not cpu else 'cpu')
-    context_size = config['dataset']['maxlen']
-    vocab_size = config['dataset']['vocab_size']
 
     model = GPTModel(attn_dim, num_heads, nn_dim, blocks, vocab_size, context_size,
                      dropout=dropout, scale_res=scale_residuals, block_norm=block_norm,
                      tied_weights=tied_weights, device=device).to(device)
 
     opt = _OPTS[optimizer](model.parameters(), lr=lr)
-    criterion = nn.CrossEntropyLoss(reduction='none', ignore_index=0)
+    criterion = nn.CrossEntropyLoss(reduction='none', ignore_index=pad_idx)
 
     scores = gzip.open(basename(data_file) + '.scores.gz', 'wt')
 
@@ -72,7 +83,7 @@ def train(data_file, config, blocks, attn_dim, num_heads, nn_dim, dropout, tied_
             y = seqs[:, 1:].to(device)
             y_mask = (y != 0).float().unsqueeze(2).to(device)
 
-            preds = model(x, mask=True, pad_key=0)
+            preds = model(x, mask=True, pad_key=pad_idx)
 
             loss = criterion(preds.transpose(1, 2), y)
             loss = loss.sum(dim=1) / y_mask.sum(dim=1).squeeze()
@@ -97,7 +108,7 @@ def train(data_file, config, blocks, attn_dim, num_heads, nn_dim, dropout, tied_
             y = seqs[:, 1:].to(device)
             y_mask = (y != 0).float().unsqueeze(2).to(device)
 
-            preds = model(x, mask=True, pad_key=0)
+            preds = model(x, mask=True, pad_key=pad_idx)
 
             loss = criterion(preds.transpose(1, 2), y)
             loss = loss.sum(dim=1) / y_mask.sum(dim=1).squeeze()

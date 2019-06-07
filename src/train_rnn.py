@@ -6,6 +6,7 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import click
+from bpe import Encoder
 
 from utils.config import load_config
 from data.loader import CSVDataset, TimeBufferedCSVReader
@@ -36,17 +37,28 @@ def cli():
 def train(data_file, config, layers, hidden_dim, dropout, rnn_cell, embedding_dim,
           tied_weights, bidir, residual, optimizer, lr, mb, cpu):
     config = load_config(config)
+    if 'maxlen' in config['dataset']:
+        config['dataset']['maxlen'] = None
+
+    if 'vocab' in config['dataset']:
+        vocab = Encoder.load(config['dataset']['vocab'])
+        config['dataset']['vocab'] = vocab
+        vocab_size = config['dataset']['vocab'].vocab_size
+        pad_idx = vocab.word_vocab[vocab.PAD]
+    else:
+        vocab_size = 255
+        pad_idx = 0
+
     window_batches = TimeBufferedCSVReader(data_file, **config['reader'])
 
     device = torch.device('cuda' if torch.cuda.is_available() and not cpu else 'cpu')
-    vocab_size = config['dataset']['vocab_size']
 
     model = RNNLanguageModel(embedding_dim, vocab_size, hidden_dim, layers, rnn_cell,
                              dropout=dropout, residual=residual, bidir=bidir,
                              tied_weights=tied_weights).to(device)
 
     opt = _OPTS[optimizer](model.parameters(), lr=lr)
-    criterion = nn.CrossEntropyLoss(reduction='none', ignore_index=0)
+    criterion = nn.CrossEntropyLoss(reduction='none', ignore_index=pad_idx)
 
     scores = gzip.open(basename(data_file) + '.scores.gz', 'wt')
 
@@ -69,7 +81,7 @@ def train(data_file, config, layers, hidden_dim, dropout, rnn_cell, embedding_di
             _, _, seqs, lens = b
             x = seqs[:, :-1].to(device)
             y = seqs[:, 1:].to(device)
-            y_mask = (y != 0).float().unsqueeze(2).to(device)
+            y_mask = (y != pad_idx).float().unsqueeze(2).to(device)
 
             preds = model(x, lens - 1)
 
@@ -94,7 +106,7 @@ def train(data_file, config, layers, hidden_dim, dropout, rnn_cell, embedding_di
             line_nums, meta, seqs, lens = b
             x = seqs[:, :-1].to(device)
             y = seqs[:, 1:].to(device)
-            y_mask = (y != 0).float().unsqueeze(2).to(device)
+            y_mask = (y != pad_idx).float().unsqueeze(2).to(device)
 
             preds = model(x, lens - 1)
 

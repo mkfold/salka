@@ -48,9 +48,8 @@ class RNNLanguageModel(nn.Module):
 
     def forward(self, x, lens):
         # assume that input is N x L x C
-        zeros = self.__zeros(len(x))#.size(0))
+        zeros = self.__zeros(len(x))
         x = self.embedding(x)
-
         pack_x = pack_padded_sequence(x, lens, batch_first=True, enforce_sorted=False)
 
         for i in range(self.n_layers):

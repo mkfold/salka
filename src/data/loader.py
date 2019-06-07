@@ -1,17 +1,14 @@
-import torch
-from torch.utils.data import Dataset
 from pickle import load
 import mmap
 import string
 
-_BASE_VOCAB = { '<p>': 0, '<s>': 1, '</s>': 2 }
-CHAR_VOCAB = { x for x in string.printable if ord(x) - 29 >= 0 } 
+import torch
+from torch.utils.data import Dataset
+from bpe import Encoder
+from bpe.encoder import DEFAULT_SOW, DEFAULT_EOW
 
-# apply rules for BPE
-def _apply_rules(line, rules):
-    for rule in rules:
-        line = line.replace(' '.join(rule), ''.join(rule))
-    return line
+_BASE_VOCAB = { '<pad>': 0, '<s>': 1, '</s>': 2 }
+CHAR_VOCAB = { x for x in string.printable if ord(x) - 29 >= 0 } 
 
 _WINDOW_SIZE = { 'D' : 86400, 'H' : 3600 }
 
@@ -68,9 +65,13 @@ class TimeBufferedCSVReader(object):
 
         return data
 
+# apply rules for BPE
+def _apply_rules(line, enc):
+    return enc.transform(line)
+
 class CSVDataset(Dataset):
     def __init__(self, data, vocab=CHAR_VOCAB, maxlen=None, rewrites=None,
-                 word_sep=None, pre_sep=',', ignore_cols=[0], meta_cols=[0,1],
+                 word_sep=None, sep=',', ignore_cols=[0], meta_cols=[0,1],
                  **kwargs):
         super().__init__()
 
@@ -79,34 +80,48 @@ class CSVDataset(Dataset):
 
         self.data = []
         self.maxlen = 0
-        self.vocab = {**_BASE_VOCAB,
-                      **{ x : i + len(_BASE_VOCAB) for i, x in enumerate(vocab)}}
+        if type(vocab) == Encoder:
+            self.vocab = vocab
+            self.pad_idx = self.vocab.word_vocab['<pad>']
+            self.sos_idx = self.vocab.word_vocab['<s>']
+            self.eos_idx = self.vocab.word_vocab['</s>']
+            if self.vocab.pct_bpe != 0.:
+                self.bound_idx = {self.vocab.bpe_vocab[DEFAULT_SOW],
+                                  self.vocab.bpe_vocab[DEFAULT_EOW]}
+            else:
+                self.bound_idx = set()
+            self.vocab_size = self.vocab.vocab_size
+            new_sep = f' {sep} ' if self.vocab.pct_bpe != 0. else ' '
+            self.transform = lambda x: x.replace(' ', '_').replace(sep, new_sep)
+        else:
+            self.vocab = {**_BASE_VOCAB,
+                          **{ x : i + len(_BASE_VOCAB) for i, x in enumerate(vocab)}}
+            self.pad_idx = self.vocab['<pad>']
+            self.sos_idx = self.vocab['<s>']
+            self.eos_idx = self.vocab['</s>']
+            self.bound_idx = set()
+            self.vocab_size = len(self.vocab) + 1
+            self.transform = lambda x: x
 
-        self.pad_idx = self.vocab['<p>']
-        self.sos_idx = self.vocab['<s>']
-        self.eos_idx = self.vocab['</s>']
-
-        self.vocab_size = len(self.vocab) + 1
         for line_no, line in data:
             # remove ignored columns
             meta = ''
             if len(ignore_cols) != 0 or len(meta_cols) != 0:
-                line = line.split(pre_sep)
+                line = line.split(sep)
                 meta = ','.join([line[x] for x in meta_cols])
                 line = [x for i, x in enumerate(line) if i not in ignore_cols]
-                line = pre_sep.join(line)
+                line = sep.join(line)
 
-            # apply BPE rewrite rules
-            if rewrites is not None:
-                line = _apply_rules('<s> ' + ' '.join(line) + ' </s>', rewrites)
+            line = self.transform(line)
 
-            # split by word/BPE delimiter or by characters
-            if word_sep is not None:
-                line = line.split(word_sep)
+            # apply rewrite rules
+            if type(self.vocab) == Encoder:
+                line = next(_apply_rules(['<s> ' + line + ' </s>'], self.vocab))
+                line = [x for x in line if x not in self.bound_idx]
             else:
                 line = ['<s>'] + list(line) + ['</s>']
+                line = [self.vocab[x] if x in self.vocab else self.vocab_size for x in line]
 
-            line = [self.vocab[x] if x in self.vocab else self.vocab_size for x in line]
             line_len = len(line)
             self.maxlen = max(self.maxlen, line_len)
             self.data += [(line_no, meta, line)]
