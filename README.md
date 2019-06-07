@@ -16,10 +16,10 @@ based on/inspired by the work of [Tuor et al.](https://arxiv.org/abs/1712.00557)
 ## dependencies
 * python 3.7
 * pytorch
-* numpy
+* bpe
+* ruamel.yaml
 * click
 * tqdm
-* bpe
 
 if you use pyenv+pipenv, there's a Pipfile to get you started :sparkles:
 
@@ -27,7 +27,7 @@ if you use pyenv+pipenv, there's a Pipfile to get you started :sparkles:
 * analysis tools:
   * evaluate model performance if labels are available
   * ranking/statistics of network and client scores
-* support for streaming inputs
+* support for input from streaming sources
 * support for conditioning input on categorical features and metadata
 
 ## references
