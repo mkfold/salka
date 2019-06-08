@@ -1,0 +1,11 @@
+reader:
+    skipdays: []        # which days to skip in CSV file
+    skiprows: 0         # number of rows to skip in CSV file
+    resolution: M       # base size of buffer window; can be D (day), H (hour), or M (minute)
+    multiplier: 15      # number of windows to buffer at a time
+dataset:
+    time_col: 0         # column of CSV containing integral timestamp
+    ignore_cols: [0]    # list of columns to exclude from input features
+    meta_cols: [0]      # list of metadata columns to include in output
+    maxlen: 128         # maximum length to truncate input (only used by gpt)
+

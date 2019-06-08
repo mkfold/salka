@@ -10,7 +10,7 @@ from bpe.encoder import DEFAULT_SOW, DEFAULT_EOW
 _BASE_VOCAB = { '<pad>': 0, '<s>': 1, '</s>': 2 }
 CHAR_VOCAB = { x for x in string.printable if ord(x) - 29 >= 0 } 
 
-_WINDOW_SIZE = { 'D' : 86400, 'H' : 3600 }
+_WINDOW_SIZE = { 'D' : 86400, 'H' : 3600, 'M' : 60 }
 
 class TimeBufferedCSVReader(object):
     def __init__(self, filename, sep=',', resolution='H', multiplier=1, skiprows=1,

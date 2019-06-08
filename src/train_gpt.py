@@ -9,10 +9,9 @@ import click
 from bpe import Encoder
 
 from utils.config import load_config
+from utils.training import opt_map
 from data.loader import CSVDataset, TimeBufferedCSVReader
 from models.transformer import GPTModel
-
-_OPTS = {'adam' : optim.Adam, 'sgd' : optim.SGD, 'rms' : optim.RMSprop}
 
 # TODO: add evaluation fcn to group
 @click.group()
@@ -57,7 +56,7 @@ def train(data_file, config, blocks, attn_dim, num_heads, nn_dim, dropout, tied_
                      dropout=dropout, scale_res=scale_residuals, block_norm=block_norm,
                      tied_weights=tied_weights, device=device).to(device)
 
-    opt = _OPTS[optimizer](model.parameters(), lr=lr)
+    opt = opt_map[optimizer](model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss(reduction='none', ignore_index=pad_idx)
 
     scores = gzip.open(basename(data_file) + '.scores.gz', 'wt')
@@ -81,7 +80,7 @@ def train(data_file, config, blocks, attn_dim, num_heads, nn_dim, dropout, tied_
             _, _, seqs, _ = b
             x = seqs[:, :-1].to(device)
             y = seqs[:, 1:].to(device)
-            y_mask = (y != 0).float().unsqueeze(2).to(device)
+            y_mask = (y != pad_idx).float().unsqueeze(2).to(device)
 
             preds = model(x, mask=True, pad_key=pad_idx)
 
@@ -106,7 +105,7 @@ def train(data_file, config, blocks, attn_dim, num_heads, nn_dim, dropout, tied_
             line_nums, meta, seqs, _ = b
             x = seqs[:, :-1].to(device)
             y = seqs[:, 1:].to(device)
-            y_mask = (y != 0).float().unsqueeze(2).to(device)
+            y_mask = (y != pad_idx).float().unsqueeze(2).to(device)
 
             preds = model(x, mask=True, pad_key=pad_idx)
 

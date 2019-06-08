@@ -9,10 +9,9 @@ import click
 from bpe import Encoder
 
 from utils.config import load_config
+from utils.training import opt_map
 from data.loader import CSVDataset, TimeBufferedCSVReader
 from models.rnn import RNNLanguageModel
-
-_OPTS = {'adam' : optim.Adam, 'sgd' : optim.SGD, 'rms' : optim.RMSprop}
 
 # TODO: add evaluation fcn to group
 @click.group()
@@ -57,7 +56,7 @@ def train(data_file, config, layers, hidden_dim, dropout, rnn_cell, embedding_di
                              dropout=dropout, residual=residual, bidir=bidir,
                              tied_weights=tied_weights).to(device)
 
-    opt = _OPTS[optimizer](model.parameters(), lr=lr)
+    opt = opt_map[optimizer](model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss(reduction='none', ignore_index=pad_idx)
 
     scores = gzip.open(basename(data_file) + '.scores.gz', 'wt')

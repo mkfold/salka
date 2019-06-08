@@ -9,15 +9,17 @@ verify_ssl = true
 torch = "*"
 numpy = "*"
 pandas = "*"
-elasticsearch-dsl = "*"
-certifi = "*"
 tqdm = "*"
 click = "*"
-dask = "*"
-cloudpickle = "*"
 ruamel-yaml = "*"
 scikit-learn = "*"
 mkdocs = "*"
+bpe = "*"
 
 [requires]
 python_version = "3.7"
+
+[scripts]
+train_rnn = "python src/train_rnn.py"
+train_gpt = "python src/train_gpt.py"
+
