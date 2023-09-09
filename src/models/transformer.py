@@ -84,7 +84,7 @@ class GPTModel(nn.Module):
         if pad_key is not None:
             pad_key = (x == pad_key).to(self.device)
 
-        if mask is not None:
+        if mask is None:
             seq_len = x.size(1)
             mask = torch.tril(torch.ones(seq_len, seq_len)).to(self.device)
 
